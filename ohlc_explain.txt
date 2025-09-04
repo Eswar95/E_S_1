@@ -1,0 +1,21 @@
+From your last row in that minute (11:03:59.232):
+
+Open (O): 24836.70 (set at 11:03:00)
+
+High (H): 24840.55 (first reached at 11:03:55.232)
+
+Low (L): 24834.15 (first reached around 11:03:35.983)
+
+Close (C): 24838.70 (value at 11:03:59.232)
+
+Quick stats
+
+Body (C − O): 24838.70 − 24836.70 = +2.00 (slightly bullish)
+
+Range (H − L): 24840.55 − 24834.15 = 6.40
+
+Lower wick (O − L): 24836.70 − 24834.15 = 2.55
+
+Upper wick (H − C): 24840.55 − 24838.70 = 1.85
+
+% move O→C: 2.00 / 24836.70 ≈ +0.008% (tiny)
