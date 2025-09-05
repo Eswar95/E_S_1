@@ -38,7 +38,8 @@ DATA_DIR = "nifty_data"
 
 # file pattern: change if your filename is different
 DATE_FOR_RUN = None  # e.g., dt.date(2025,9,4) or None for today
-INPUT_HA_FILENAME_TEMPLATE = "{date}minutes_heikin_ashi.csv"  # placed in DATA_DIR
+# INPUT_HA_FILENAME_TEMPLATE = "{date}minutes_heikin_ashi.csv"  # placed in DATA_DIR
+INPUT_HA_FILENAME_TEMPLATE = "2025-09-05_nifty50_1min_ha.csv"  # placed in DATA_DIR
 # Example produced earlier: 2025-09-04minutes_heikin_ashi.csv
 # If your file name is different, change the template above.
 
