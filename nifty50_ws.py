@@ -6,10 +6,12 @@ import os
 import logging
 import time
 import pytz
+import sys
 
 logging.basicConfig(level=logging.DEBUG)
 
 IST = pytz.timezone("Asia/Kolkata")
+MARKET_CLOSE = dt.time(15, 15)   # ⏰ stop at 3:15 PM IST
 
 # Initialize KiteConnect
 kite = KiteConnect(api_key=KiteAPI)
@@ -26,82 +28,87 @@ folder = "nifty_data"
 os.makedirs(folder, exist_ok=True)
 
 today_str = dt.date.today().strftime("%Y-%m-%d")
-# Files
-# candle_csv = "minutes_timestamp.csv"
-# tick_csv = "seconds_time_stamp.csv"
 candle_csv = os.path.join(folder, f"{today_str}minutes_timestamp.csv")
-tick_csv = os.path.join(folder, f"{today_str}seconds_time_stamp.csv")
+tick_csv   = os.path.join(folder, f"{today_str}seconds_time_stamp.csv")
 
-# Current candle tracker
 current_candle = {}
+stopped = False  # prevent double-close/logging after shutdown
 
 
 def on_ticks(ws, ticks):
     """Handle incoming ticks from WebSocket"""
-    global current_candle
-    tick_data = []
+    global current_candle, stopped
+    if stopped:
+        return
 
+    tick_batch = []
     for tick in ticks:
-        # Zerodha tick timestamp (default to UTC now if missing)
-        tick_time = tick.get("timestamp", dt.datetime.utcnow())
-        # Convert to IST
-        tick_time = tick_time.astimezone(IST)
+        # Tick time (UTC -> IST)
+        tick_time = tick.get("timestamp", dt.datetime.utcnow()).astimezone(IST)
+        # ⏹ If we've crossed 3:15 PM, flush & stop
+        if tick_time.time() >= MARKET_CLOSE and not stopped:
+            if current_candle:
+                save_candle(current_candle)
+                print("🧾 Final candle saved at/after 15:15 IST.")
+            stopped = True
+            print("⏹ Market close (15:15 IST) reached. Closing WebSocket...")
+            try:
+                ws.close()   # gracefully close the socket
+            finally:
+                # small delay to let close propagate, then exit
+                time.sleep(1)
+                sys.exit(0)
+            return
 
         # ---- Aggregate into 1-min candle ----
         minute = tick_time.replace(second=0, microsecond=0)
         price = tick["last_price"]
 
         if current_candle.get("time") != minute:
-            # If a candle exists, save it
             if current_candle:
                 save_candle(current_candle)
-            # Start new candle
             current_candle = {
                 "time": minute,
                 "open": price,
                 "high": price,
-                "low": price,
+                "low":  price,
                 "close": price
             }
         else:
-            # Update ongoing candle
-            current_candle["high"] = max(current_candle["high"], price)
-            current_candle["low"] = min(current_candle["low"], price)
+            current_candle["high"]  = max(current_candle["high"], price)
+            current_candle["low"]   = min(current_candle["low"],  price)
             current_candle["close"] = price
 
         # ---- Save raw tick with candle context ----
-        tick_data.append({
+        tick_batch.append({
             "date": minute.date(),
             "time": tick_time,
-            "open": current_candle["open"],
-            "high": current_candle["high"],
-            "low": current_candle["low"],
+            "open":  current_candle["open"],
+            "high":  current_candle["high"],
+            "low":   current_candle["low"],
             "close": current_candle["close"],
             "last_price": price,
-            "volume": tick.get("volume", None),
-            "oi": tick.get("oi", None)
+            "volume": tick.get("volume"),
+            "oi":     tick.get("oi")
         })
 
         print(f"🕒 {minute} | O:{current_candle['open']} H:{current_candle['high']} "
               f"L:{current_candle['low']} C:{current_candle['close']} | Last:{price}")
 
-    # Save raw ticks batch to CSV
-    if tick_data:
-        save_ticks(tick_data)
+    if tick_batch:
+        save_ticks(tick_batch)
 
 
-def save_ticks(tick_data):
-    """Save raw ticks into CSV"""
-    df = pd.DataFrame(tick_data)
+def save_ticks(rows):
+    df = pd.DataFrame(rows)
     if os.path.exists(tick_csv):
         df.to_csv(tick_csv, mode="a", header=False, index=False)
     else:
         df.to_csv(tick_csv, index=False)
-    print(f"✅ Saved {len(tick_data)} tick(s)")
+    print(f"✅ Saved {len(rows)} tick(s)")
 
 
 def save_candle(candle):
-    """Save completed 1-minute candle into CSV"""
     df = pd.DataFrame([candle])
     if os.path.exists(candle_csv):
         df.to_csv(candle_csv, mode="a", header=False, index=False)
@@ -143,8 +150,12 @@ def run_ws():
     kws.on_reconnect = on_reconnect
     kws.connect(threaded=True, disable_ssl_verification=False)
 
-    # ✅ Keep main thread alive
+    # Keep main thread alive; also hard-stop if loop time passes 15:15 (backup)
     while True:
+        now_ist = dt.datetime.now(IST).time()
+        if now_ist >= MARKET_CLOSE:
+            print("⏹ Main loop sees 15:15 IST. Exiting...")
+            break
         time.sleep(1)
 
 

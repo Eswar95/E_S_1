@@ -1,0 +1,37 @@
+To push a local folder (which represents your project) to GitHub, follow these steps using the command line:
+Initialize a Git repository in your local folder:
+Navigate to your project's root directory in your terminal or command prompt and run:
+Code
+
+
+
+    git init
+Add your project files to the staging area:
+This command stages all files and folders in your current directory for the next commit:
+Code
+
+
+git add .
+Commit the staged files.
+Create a commit with a descriptive message:
+Code
+
+
+    git commit -m "Initial commit of my project"
+Create a new repository on GitHub.
+Go to GitHub, sign in, and create a new empty repository. Do not initialize it with a README or license at this stage, as you are pushing an existing local project. Copy the repository's URL. add the remote origin.
+Link your local repository to the newly created GitHub repository by adding a remote origin. Replace <remote_repository_URL> with the URL you copied from GitHub.
+Code
+
+
+
+    git remote add origin <remote_repository_URL>
+Push your local branch to GitHub.
+Push your local main (or master) branch to the origin remote. The -u flag sets the upstream branch, so future git push commands will be simpler.
+Code
+
+
+
+    git push -u origin main
+(If your default branch is named master, use git push -u origin master instead.) Verify the push.
+Refresh your GitHub repository page in your web browser. You should now see your project's files and folders uploaded to the repository.
